@@ -5,7 +5,7 @@
  * The API key lives ONLY here (in Vercel environment variables),
  * and is never sent to or visible by the end user.
  */
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   // Allow browser requests (CORS)
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
