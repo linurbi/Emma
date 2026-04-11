@@ -4,11 +4,11 @@
    CONFIG
 ═══════════════════════════════════════════════════ */
 const CONFIG = {
-  model:        'gpt-4o-mini',
   maxQuestions: 21,
   maxGuesses:   3,
-  apiEndpoint:  'https://api.openai.com/v1/chat/completions',
-  storageKey:   'akinator_oai_key',
+  // Calls our own serverless function (/api/chat) — the OpenAI key
+  // lives there as an environment variable, never exposed to the browser.
+  apiEndpoint:  '/api/chat',
 };
 
 /** System prompt sent to the AI on every request. */
@@ -38,54 +38,23 @@ let state = buildInitialState();
 
 function buildInitialState() {
   return {
-    apiKey:      '',
-    history:     [],   // messages sent to OpenAI (excluding system prompt)
-    qCount:      0,
-    guessCount:  0,
-    lastGuess:   null,
+    history:    [],   // conversation messages (excluding system prompt)
+    qCount:     0,
+    guessCount: 0,
+    lastGuess:  null,
   };
 }
 
 /* ═══════════════════════════════════════════════════
-   API KEY MANAGEMENT
-═══════════════════════════════════════════════════ */
-function loadKey()           { return localStorage.getItem(CONFIG.storageKey) || ''; }
-function persistKey(key)     { localStorage.setItem(CONFIG.storageKey, key); }
-function removeKey()         { localStorage.removeItem(CONFIG.storageKey); }
-
-function saveKey() {
-  const key = document.getElementById('apiInput').value.trim();
-  if (!key.startsWith('sk-')) {
-    showEl('apiError', true);
-    return;
-  }
-  showEl('apiError', false);
-  persistKey(key);
-  state.apiKey = key;
-  show('intro');
-}
-
-function clearKey() {
-  removeKey();
-  state.apiKey = '';
-  show('apikey');
-}
-
-/* ═══════════════════════════════════════════════════
-   OPENAI API CALL
+   API CALL  (to our serverless proxy at /api/chat)
 ═══════════════════════════════════════════════════ */
 async function callAI(messages) {
   const res = await fetch(CONFIG.apiEndpoint, {
     method:  'POST',
-    headers: {
-      'Content-Type':  'application/json',
-      'Authorization': `Bearer ${state.apiKey}`,
-    },
+    headers: { 'Content-Type': 'application/json' },
+    // We send only the messages; the server adds the API key and model
     body: JSON.stringify({
-      model:       CONFIG.model,
-      messages:    [{ role: 'system', content: SYSTEM_PROMPT }, ...messages],
-      max_tokens:  200,
-      temperature: 0.3,
+      messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...messages],
     }),
   });
 
@@ -268,7 +237,7 @@ function resetGame() {
 /* ═══════════════════════════════════════════════════
    UI HELPERS
 ═══════════════════════════════════════════════════ */
-const SCREEN_IDS = ['apikey', 'intro', 'thinking', 'asking', 'guessing', 'win', 'lose'];
+const SCREEN_IDS = ['intro', 'thinking', 'asking', 'guessing', 'win', 'lose'];
 
 function show(name) {
   SCREEN_IDS.forEach(id => {
@@ -383,11 +352,5 @@ function clearConfetti() {
    INIT  (runs on page load)
 ═══════════════════════════════════════════════════ */
 (function init() {
-  const key = loadKey();
-  if (key) {
-    state.apiKey = key;
-    show('intro');
-  } else {
-    show('apikey');
-  }
+  show('intro');
 })();

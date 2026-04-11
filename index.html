@@ -31,26 +31,6 @@
   <main class="wrap">
     <div class="card" id="card">
 
-      <!-- API KEY SETUP -->
-      <section id="s-apikey" class="screen">
-        <div class="avatar">🔑</div>
-        <h1 class="game-title">הגדרת API</h1>
-        <p class="muted" style="margin-bottom:20px;">
-          המשחק משתמש ב-AI של OpenAI כדי לנחש <strong>כל דמות שתחשוב עליה</strong>.<br>
-          נדרש מפתח API חינמי.
-        </p>
-        <div class="info-box">
-          <div class="info-row"><span class="info-icon">1️⃣</span><span>כנס ל-<a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com/api-keys</a></span></div>
-          <div class="info-row"><span class="info-icon">2️⃣</span><span>צור מפתח חדש (Create new secret key)</span></div>
-          <div class="info-row"><span class="info-icon">3️⃣</span><span>הדבק אותו כאן — הוא נשמר רק במכשיר שלך</span></div>
-        </div>
-        <input id="apiInput" class="api-input" type="password" placeholder="sk-..." autocomplete="off" />
-        <div id="apiError" class="api-error hidden">מפתח לא תקין, נסה שוב.</div>
-        <div class="btn-row">
-          <button class="btn btn-primary" onclick="saveKey()">✅ שמור ובוא נשחק</button>
-        </div>
-      </section>
-
       <!-- INTRO -->
       <section id="s-intro" class="screen hidden">
         <div class="avatar">🤖</div>
@@ -63,7 +43,6 @@
         </div>
         <div class="btn-row">
           <button class="btn btn-primary" onclick="goThinking()">🎮 בואו נשחק!</button>
-          <button class="btn btn-ghost" onclick="clearKey()" title="שנה מפתח API">⚙️</button>
         </div>
       </section>
 
@@ -116,7 +95,7 @@
           <button class="btn btn-no"  onclick="giveAnswer(false)">❌ לא</button>
         </div>
 
-        <div id="apiErrInline" class="api-error hidden" style="margin-top:14px;"></div>
+        <div id="apiErrInline" class="api-error hidden" style="margin-top:14px;text-align:center;"></div>
       </section>
 
       <!-- GUESSING -->
