@@ -1,0 +1,15 @@
+{
+  "name": "נחש מי הדמות",
+  "short_name": "נחש!",
+  "description": "משחק 21 שאלות מבוסס בינה מלאכותית",
+  "start_url": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#08001a",
+  "theme_color": "#7b2ff7",
+  "lang": "he",
+  "dir": "rtl",
+  "icons": [
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

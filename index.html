@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🎭 נחש מי הדמות</title>
+
+  <!-- PWA / Mobile install -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#08001a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="apple-touch-icon" href="icons/icon.svg" />
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="css/style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;900&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+  <!-- ── Animated background ── -->
+  <div class="bg" aria-hidden="true">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+  </div>
+  <div class="stars" aria-hidden="true"></div>
+  <div id="confetti" aria-hidden="true"></div>
+
+  <!-- ── App shell ── -->
+  <main class="wrap">
+    <div class="card" id="card">
+
+      <!-- API KEY SETUP -->
+      <section id="s-apikey" class="screen">
+        <div class="avatar">🔑</div>
+        <h1 class="game-title">הגדרת API</h1>
+        <p class="muted" style="margin-bottom:20px;">
+          המשחק משתמש ב-AI של OpenAI כדי לנחש <strong>כל דמות שתחשוב עליה</strong>.<br>
+          נדרש מפתח API חינמי.
+        </p>
+        <div class="info-box">
+          <div class="info-row"><span class="info-icon">1️⃣</span><span>כנס ל-<a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com/api-keys</a></span></div>
+          <div class="info-row"><span class="info-icon">2️⃣</span><span>צור מפתח חדש (Create new secret key)</span></div>
+          <div class="info-row"><span class="info-icon">3️⃣</span><span>הדבק אותו כאן — הוא נשמר רק במכשיר שלך</span></div>
+        </div>
+        <input id="apiInput" class="api-input" type="password" placeholder="sk-..." autocomplete="off" />
+        <div id="apiError" class="api-error hidden">מפתח לא תקין, נסה שוב.</div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="saveKey()">✅ שמור ובוא נשחק</button>
+        </div>
+      </section>
+
+      <!-- INTRO -->
+      <section id="s-intro" class="screen hidden">
+        <div class="avatar">🤖</div>
+        <h1 class="game-title">נחש מי<br>הדמות</h1>
+        <p class="game-sub">האם אני יכול לנחש את הדמות שחשבת עליה?</p>
+        <div class="rules-box">
+          <div class="rule"><span class="rule-icon">🎯</span><span>חשוב על <strong>כל</strong> דמות — אדם אמיתי, מצוייר, חיה, גיבור על, היסטורי...</span></div>
+          <div class="rule"><span class="rule-icon">❓</span><span>אני אשאל עד <strong>21 שאלות</strong> כן / לא</span></div>
+          <div class="rule"><span class="rule-icon">🎲</span><span>יש לי <strong>3 ניחושים</strong> בלבד — האם תנצח אותי?</span></div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="goThinking()">🎮 בואו נשחק!</button>
+          <button class="btn btn-ghost" onclick="clearKey()" title="שנה מפתח API">⚙️</button>
+        </div>
+      </section>
+
+      <!-- THINKING -->
+      <section id="s-thinking" class="screen hidden">
+        <div class="avatar">🤔</div>
+        <h2 class="section-title">חשוב על דמות</h2>
+        <p class="muted">בחר/י דמות אחת בראש. יכולה להיות:</p>
+        <div class="badge-row">
+          <span class="badge bp">👤 אדם אמיתי חי</span>
+          <span class="badge bk">💀 דמות היסטורית</span>
+          <span class="badge bc">🎨 דמות מצוירת</span>
+          <span class="badge by">🦁 חיה מפורסמת</span>
+          <span class="badge bp">🦸 גיבור על</span>
+          <span class="badge bk">📚 דמות מסרט/ספר</span>
+        </div>
+        <span class="big-emoji">🧐</span>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="startAsking()">✅ חשבתי! בוא תנחש</button>
+        </div>
+      </section>
+
+      <!-- ASKING -->
+      <section id="s-asking" class="screen hidden">
+        <div class="progress-wrap">
+          <div class="progress-labels">
+            <span id="qLabel">שאלה 1 מתוך 21</span>
+            <span id="remainLabel"></span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-bar" id="pBar" style="width:0%"></div>
+          </div>
+          <div class="dot-history" id="dotHistory"></div>
+        </div>
+
+        <div class="avatar small">🤖</div>
+
+        <div id="thinkingAnim" class="thinking hidden">
+          <span>AI חושב</span>
+          <div class="dot-spin"><span></span><span></span><span></span></div>
+        </div>
+
+        <div id="qBlock">
+          <div class="q-badge" id="qBadge">שאלה #1</div>
+          <div class="q-text" id="qText"></div>
+        </div>
+
+        <div class="btn-row" id="yesNoBtns" style="display:none">
+          <button class="btn btn-yes" onclick="giveAnswer(true)">✅ כן</button>
+          <button class="btn btn-no"  onclick="giveAnswer(false)">❌ לא</button>
+        </div>
+
+        <div id="apiErrInline" class="api-error hidden" style="margin-top:14px;"></div>
+      </section>
+
+      <!-- GUESSING -->
+      <section id="s-guessing" class="screen hidden">
+        <div class="avatar">💭</div>
+        <h2 class="section-title">אני חושב שזה...</h2>
+        <p class="muted">ניחוש <span id="guessNumLabel">1</span> מתוך 3</p>
+        <div class="guess-dots">
+          <div class="gdot" id="gd1"></div>
+          <div class="gdot" id="gd2"></div>
+          <div class="gdot" id="gd3"></div>
+        </div>
+        <div class="guess-wrap">
+          <span class="guess-emoji" id="gEmoji"></span>
+          <div class="guess-name" id="gName"></div>
+          <div class="guess-name-en" id="gNameEn"></div>
+          <div id="gClues"></div>
+        </div>
+        <p class="muted" style="margin:6px 0 2px;">האם ניחשתי נכון?</p>
+        <div class="btn-row">
+          <button class="btn btn-yes" onclick="onGuessResult(true)">🎉 כן! ניצחת!</button>
+          <button class="btn btn-no"  onclick="onGuessResult(false)">😅 לא, טעית</button>
+        </div>
+      </section>
+
+      <!-- WIN -->
+      <section id="s-win" class="screen hidden">
+        <span class="big-emoji">🎊</span>
+        <div class="win-title">ניחשתי נכון! 🎉</div>
+        <p class="muted">הבינה המלאכותית ניצחה הפעם! 🤖✨</p>
+        <div class="stats" id="winStats"></div>
+        <div class="guess-wrap" id="winCard"></div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="resetGame()">🔄 שחק שוב</button>
+        </div>
+      </section>
+
+      <!-- LOSE -->
+      <section id="s-lose" class="screen hidden">
+        <span class="big-emoji lose-emoji">😤</span>
+        <div class="lose-title">ניצחת אותי! 🏆</div>
+        <p class="muted">לא הצלחתי לנחש. אתה/את טוב/ה מהמחשב!</p>
+        <p style="font-size:1.05rem;color:rgba(255,255,255,.8);margin:20px 0 6px;">מי הייתה הדמות? 🤷</p>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="resetGame()">🔄 שחק שוב</button>
+        </div>
+      </section>
+
+    </div><!-- /card -->
+    <footer class="footer">נחש מי הדמות · Emma © 2026</footer>
+  </main>
+
+  <script src="js/game.js"></script>
+</body>
+</html>
