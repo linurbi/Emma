@@ -94,8 +94,7 @@ function parseResponse(text) {
 function goThinking() { show('thinking'); }
 
 function startAsking() {
-  state    = buildInitialState();
-  state.apiKey = loadKey();
+  state = buildInitialState();
 
   // Seed the conversation — AI will reply with first question
   state.history = [{ role: 'user', content: 'מוכן! חשבתי על דמות. תתחיל לשאול שאלות.' }];
@@ -230,7 +229,6 @@ function buildWinCardHTML(g) {
 function resetGame() {
   clearConfetti();
   state = buildInitialState();
-  state.apiKey = loadKey();
   show('intro');
 }
 
