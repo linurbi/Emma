@@ -536,6 +536,20 @@ a:hover { text-decoration: underline; }
   100% { transform: translateY(110vh)  rotate(720deg); opacity: 0; }
 }
 
+/* ── Subtle restart link (shown during game) ── */
+.btn-restart {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,.35);
+  font-family: 'Heebo', sans-serif;
+  font-size: .85rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 8px;
+  transition: color .2s;
+}
+.btn-restart:hover { color: rgba(255,255,255,.7); }
+
 /* ═══════════════════════════════════════════════════
    FOOTER
 ═══════════════════════════════════════════════════ */
