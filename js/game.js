@@ -6,69 +6,72 @@
 const CONFIG = {
   maxQuestions: 21,
   maxGuesses:   3,
-  // Calls our own serverless function (/api/chat) — the OpenAI key
-  // lives there as an environment variable, never exposed to the browser.
   apiEndpoint:  '/api/chat',
 };
 
-/** System prompt sent to the AI on every request. */
-const SYSTEM_PROMPT = `אתה משחק "נחש מי הדמות" עם ילדים ומבוגרים בעברית.
-המשתמש חשב על דמות — יכול להיות אדם אמיתי, דמות מצוירת, חיה מפורסמת, גיבור על, דמות מסרט או סדרה.
-
-━━━ סדר השאלות המומלץ (מהכלל לפרט) ━━━
-התחל תמיד עם השאלות הבסיסיות האלה לפי הסדר:
-1. האם הדמות זכר?
-2. האם הדמות מצוירת (קומיקס / אנימציה)?
-3. האם הדמות אדם אמיתי שחי בעולם האמיתי?
-4. האם הדמות עדיין חיה היום?
-5. האם הדמות חיה (בעל חיים)?
-6. האם הדמות מפורסמת מאוד ברחבי העולם?
-7. האם הדמות מופיעה בסרטים או בטלוויזיה?
-8. האם הדמות ישראלית?
-9. המשך עם שאלות ספציפיות יותר לפי התשובות שקיבלת.
-
-━━━ כללים חשובים ━━━
-- שאל שאלות פשוטות שגם ילד בן 6 יבין. אסור להשתמש במילים כמו: פנטזיה, ז'אנר, פיקטיבי, אנטגוניסט, פרוטגוניסט.
-- שאל שאלה אחת בלבד בכל פעם.
-- אל תחזור על שאלה שכבר שאלת.
-- אחרי 5-7 שאלות אתה כבר אמור לדעת לאיזה קטגוריה שייכת הדמות ולהתחיל לנחש.
-- אם הדמות מצוירת — חשוב על דמויות כמו: באגס באני, דאפי דאק, טום, ג'רי, מיקי מאוס, ספוגבוב, פיקאצ'ו, שרק, סימבה, ניל הצב, אריאל, אלזה, הארי פוטר, בן 10 וכו'.
-- אם הדמות חיה אמיתית — חשוב על: כלב, חתול, אריה, פיל, כרישה, דולפין וכו'.
-- אם האדם אמיתי ומפורסם — חשוב על: זמרים, ספורטאים, שחקנים, מדענים, מנהיגים.
-- נחש בביטחון גם דמויות ישנות ומוכרות — אל תפחד לנחש.
-
-━━━ פורמט ניחוש ━━━
-כשאתה רוצה לנחש, כתוב בדיוק (ורק) בפורמט הזה:
-GUESS|||[שם בעברית]|||[English name]|||[emoji מתאים]|||[רמז פשוט 1]|||[רמז פשוט 2]|||[רמז פשוט 3]
-
-דוגמה:
-GUESS|||באגס באני|||Bugs Bunny|||🐰|||ארנב מצויר ישן ומפורסם|||אוהב לאכול גזר|||אומר "מה יש, דוקטור?"
-
-כשאתה שואל שאלה — כתוב רק את השאלה, בלי הסברים נוספים.
-התחל עכשיו עם השאלה הראשונה.`;
+/* ═══════════════════════════════════════════════════
+   FIXED QUESTIONS
+   These 5 questions are ALWAYS asked first, instantly,
+   with no AI delay. They give the AI a solid foundation.
+═══════════════════════════════════════════════════ */
+const FIXED_QUESTIONS = [
+  { id: 'isMale',    text: 'האם הדמות זכר?' },
+  { id: 'isCartoon', text: 'האם הדמות מצוירת (אנימציה / קומיקס)?' },
+  { id: 'isReal',    text: 'האם הדמות אדם אמיתי שחי בעולם האמיתי?' },
+  { id: 'isFamous',  text: 'האם הדמות מפורסמת מאוד?' },
+  { id: 'isAnimal',  text: 'האם הדמות חיה (בעל חיים)?' },
+];
 
 /* ═══════════════════════════════════════════════════
-   STATE  (single source of truth)
+   AI SYSTEM PROMPT
+   The AI only takes over AFTER the 5 fixed questions,
+   so it already knows: sex / cartoon / real / famous / animal.
+═══════════════════════════════════════════════════ */
+const SYSTEM_PROMPT = `אתה משחק "נחש מי הדמות" עם ילדים ומבוגרים.
+כבר נשאלו 5 שאלות בסיסיות — המשתמש ספק לך עובדות ראשוניות על הדמות.
+המשך לשאול שאלות כן/לא פשוטות וספציפיות כדי לנחש מיהי הדמות.
+
+כללים:
+• שאלה קצרה אחת בלבד — כן/לא.
+• שפה פשוטה שגם ילד בן 6 יבין. אסור: פנטזיה, ז'אנר, פיקציה, אנטגוניסט.
+• אל תחזור על שאלה שכבר נשאלה (כולל 5 הבסיסיות).
+• אל תשאל "האם מפורסם?" — כבר נשאל. אל תשאל "האם מצויר?" — כבר נשאל.
+• נחש אחרי 4-6 שאלות נוספות, לא צריך 21 שאלות לדמויות מוכרות.
+• אם מצויר — דמויות כמו: באגס באני, דאפי דאק, מיקי מאוס, ספוגבוב, שרק, פיקאצ'ו, סימבה, אריאל, אלזה, בן10, דורה, הארי פוטר, טום, ג'רי, וודי, באז לייטייר, ניל הצב, כחול.
+• אם אדם אמיתי ומפורסם — שאל: זמר? שחקן? ספורטאי? ישראלי/ת? עדיין חי/ה?
+• נחש בביטחון — אפילו דמויות ישנות ומוכרות.
+
+פורמט ניחוש (ורק בפורמט הזה, שום דבר אחר):
+GUESS|||[שם עברית]|||[English]|||[emoji]|||[רמז 1]|||[רמז 2]|||[רמז 3]
+
+דוגמאות:
+GUESS|||באגס באני|||Bugs Bunny|||🐰|||ארנב מצויר ישן ומפורסם|||אוהב גזר|||אומר "מה יש, דוקטור?"
+GUESS|||מיקי מאוס|||Mickey Mouse|||🐭|||עכבר סמל דיסני|||אוזניים עגולות|||חבר מינו מאוס`;
+
+/* ═══════════════════════════════════════════════════
+   STATE
 ═══════════════════════════════════════════════════ */
 let state = buildInitialState();
 
 function buildInitialState() {
   return {
-    history:    [],   // conversation messages (excluding system prompt)
-    qCount:     0,
-    guessCount: 0,
-    lastGuess:  null,
+    phase:        'fixed',  // 'fixed' | 'ai'
+    fixedIdx:     0,        // current index in FIXED_QUESTIONS
+    fixedAnswers: {},       // { isMale: true, isCartoon: false, ... }
+    history:      [],       // messages for OpenAI (only used in 'ai' phase)
+    qCount:       0,
+    guessCount:   0,
+    lastGuess:    null,
   };
 }
 
 /* ═══════════════════════════════════════════════════
-   API CALL  (to our serverless proxy at /api/chat)
+   API CALL
 ═══════════════════════════════════════════════════ */
 async function callAI(messages) {
   const res = await fetch(CONFIG.apiEndpoint, {
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
-    // We send only the messages; the server adds the API key and model
     body: JSON.stringify({
       messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...messages],
     }),
@@ -86,19 +89,15 @@ async function callAI(messages) {
 /* ═══════════════════════════════════════════════════
    RESPONSE PARSING
 ═══════════════════════════════════════════════════ */
-/**
- * Parses AI text into { type: 'question'|'guess', ... }.
- * Guess format: GUESS|||name|||nameEn|||emoji|||clue1|||clue2|||clue3
- */
 function parseResponse(text) {
   if (text.includes('GUESS|||')) {
     const parts = text.split('GUESS|||')[1].split('|||').map(s => s.trim());
     return {
-      type:    'guess',
-      nameHe:  parts[0] || '???',
-      nameEn:  parts[1] || '',
-      emoji:   parts[2] || '🤔',
-      clues:   [parts[3], parts[4], parts[5]].filter(Boolean),
+      type:   'guess',
+      nameHe: parts[0] || '???',
+      nameEn: parts[1] || '',
+      emoji:  parts[2] || '🤔',
+      clues:  [parts[3], parts[4], parts[5]].filter(Boolean),
     };
   }
   return { type: 'question', text: text.replace(/^"(.*)"$/, '$1') };
@@ -111,49 +110,89 @@ function goThinking() { show('thinking'); }
 
 function startAsking() {
   state = buildInitialState();
-
-  // Seed the conversation — AI will reply with first question
-  state.history = [{ role: 'user', content: 'מוכן! חשבתי על דמות. תתחיל לשאול שאלות.' }];
-
   clearProgressUI();
   show('asking');
-  fetchNextMove();
+  askNextQuestion();
 }
 
-async function fetchNextMove() {
+/** Central dispatcher — decides fixed vs AI turn */
+function askNextQuestion() {
+  if (state.phase === 'fixed') {
+    askFixedQuestion();
+  } else {
+    fetchAIQuestion();
+  }
+}
+
+/* ── Fixed phase (instant, no API) ── */
+function askFixedQuestion() {
+  if (state.fixedIdx >= FIXED_QUESTIONS.length) {
+    switchToAIPhase();
+    return;
+  }
+
+  const q = FIXED_QUESTIONS[state.fixedIdx];
+  state.qCount++;
+  updateProgressUI();
+  setText('qBadge', `שאלה #${state.qCount}`);
+  setText('qText',  q.text);
+  setAskingUILocked(false);
+}
+
+/** Called after all fixed questions are answered — hands off to AI */
+function switchToAIPhase() {
+  state.phase = 'ai';
+
+  // Build a context summary so the AI knows what was already answered
+  const a = state.fixedAnswers;
+  const facts = [
+    `מין: ${a.isMale    ? 'זכר' : 'נקבה'}`,
+    `מצויר: ${a.isCartoon ? 'כן'  : 'לא'}`,
+    `אדם אמיתי: ${a.isReal    ? 'כן'  : 'לא'}`,
+    `מפורסם מאוד: ${a.isFamous  ? 'כן'  : 'לא'}`,
+    `חיה (בע"ח): ${a.isAnimal  ? 'כן'  : 'לא'}`,
+  ].join(' | ');
+
+  state.history = [{
+    role:    'user',
+    content: `תשובות לשאלות הראשונות: ${facts}. המשך לשאול שאלות ספציפיות יותר.`,
+  }];
+
+  fetchAIQuestion();
+}
+
+/* ── AI phase ── */
+async function fetchAIQuestion() {
   setAskingUILocked(true);
 
   try {
     const raw    = await callAI(state.history);
     const parsed = parseResponse(raw);
 
-    // Add assistant message to history
     state.history.push({ role: 'assistant', content: raw });
 
     if (parsed.type === 'guess') {
       handleGuess(parsed);
     } else {
-      handleQuestion(parsed.text);
+      showAIQuestion(parsed.text);
     }
   } catch (err) {
-    showInlineError(`שגיאה: ${err.message}. בדוק את מפתח ה-API ונסה שוב.`);
+    showInlineError(`שגיאה: ${err.message}`);
     setAskingUILocked(false);
   }
 }
 
-function handleQuestion(text) {
+function showAIQuestion(text) {
   state.qCount++;
   updateProgressUI();
-
   setText('qBadge', `שאלה #${state.qCount}`);
   setText('qText',  text);
-
   setAskingUILocked(false);
 
   if (state.qCount >= CONFIG.maxQuestions) {
-    // Force a guess on the next turn
-    state.history.push({ role: 'user', content: 'כן' }); // dummy to keep history valid
-    fetchNextMove();
+    // Force a final guess
+    state.history.push({ role: 'user', content: 'נגמרו השאלות שלי, נחש עכשיו!' });
+    fetchAIQuestion();
   }
 }
 
@@ -162,7 +201,6 @@ function handleGuess(guess) {
   state.lastGuess = guess;
 
   updateGuessDots();
-
   setText('guessNumLabel', state.guessCount);
   setText('gEmoji',  guess.emoji);
   setText('gName',   guess.nameHe);
@@ -172,20 +210,28 @@ function handleGuess(guess) {
   show('guessing');
 }
 
+/* ── User answers yes/no ── */
 function giveAnswer(isYes) {
-  if (state.qCount >= CONFIG.maxQuestions && !isYes) {
-    // Out of questions, still wrong → lose
-    show('lose');
-    return;
-  }
-
   addAnswerDot(isYes);
 
-  // Push user answer into history
-  state.history.push({ role: 'user', content: isYes ? 'כן' : 'לא' });
+  if (state.phase === 'fixed') {
+    // Record the fixed answer
+    const q = FIXED_QUESTIONS[state.fixedIdx];
+    state.fixedAnswers[q.id] = isYes;
+    state.fixedIdx++;
+    askNextQuestion();
+  } else {
+    // Add answer to AI conversation history
+    state.history.push({ role: 'user', content: isYes ? 'כן' : 'לא' });
 
-  show('asking');
-  fetchNextMove();
+    if (state.qCount >= CONFIG.maxQuestions) {
+      show('lose');
+      return;
+    }
+
+    show('asking');
+    fetchAIQuestion();
+  }
 }
 
 function onGuessResult(correct) {
@@ -194,10 +240,9 @@ function onGuessResult(correct) {
     return;
   }
 
-  // Tell AI the guess was wrong
   state.history.push({
     role:    'user',
-    content: `לא, זה לא ${state.lastGuess.nameHe}. המשך לשאול שאלות כדי לצמצם.`,
+    content: `לא, זה לא ${state.lastGuess.nameHe}. שאל עוד שאלות ספציפיות.`,
   });
 
   if (state.guessCount >= CONFIG.maxGuesses) {
@@ -206,7 +251,7 @@ function onGuessResult(correct) {
   }
 
   show('asking');
-  fetchNextMove();
+  fetchAIQuestion();
 }
 
 /* ═══════════════════════════════════════════════════
@@ -214,10 +259,8 @@ function onGuessResult(correct) {
 ═══════════════════════════════════════════════════ */
 function showWin() {
   show('win');
-
-  const g = state.lastGuess;
   setHTML('winStats', buildStatsHTML());
-  setHTML('winCard',  buildWinCardHTML(g));
+  setHTML('winCard',  buildWinCardHTML(state.lastGuess));
   launchConfetti();
 }
 
@@ -229,7 +272,7 @@ function buildStatsHTML() {
 }
 
 function buildWinCardHTML(g) {
-  const cluesHTML = g.clues.map(c => `<span class="clue">💡 ${c}</span>`).join('');
+  const clues = g.clues.map(c => `<span class="clue">💡 ${c}</span>`).join('');
   return `
     <span style="font-size:4rem;display:block;margin-bottom:10px;">${g.emoji}</span>
     <div style="font-size:1.7rem;font-weight:900;
@@ -238,7 +281,7 @@ function buildWinCardHTML(g) {
       ${g.nameHe}
     </div>
     <div style="color:rgba(255,255,255,.35);font-size:.85rem;margin-top:3px;">${g.nameEn}</div>
-    <div style="margin-top:13px;">${cluesHTML}</div>
+    <div style="margin-top:13px;">${clues}</div>
   `;
 }
 
@@ -265,11 +308,10 @@ function show(name) {
 
 function triggerAnimation(el) {
   el.style.animation = 'none';
-  void el.offsetWidth;          // reflow to restart animation
+  void el.offsetWidth;
   el.style.animation = '';
 }
 
-/** Show/hide an element by id */
 function showEl(id, visible) {
   document.getElementById(id).classList.toggle('hidden', !visible);
 }
@@ -282,9 +324,9 @@ function setAskingUILocked(locked) {
   const anim  = document.getElementById('thinkingAnim');
   const block = document.getElementById('qBlock');
 
-  btns.style.display         = locked ? 'none'  : 'flex';
+  btns.style.display  = locked ? 'none' : 'flex';
   anim.classList.toggle('hidden', !locked);
-  block.style.opacity        = locked ? '0.3'   : '1';
+  block.style.opacity = locked ? '0.3' : '1';
 }
 
 function showInlineError(msg) {
@@ -293,17 +335,16 @@ function showInlineError(msg) {
   showEl('apiErrInline', true);
 }
 
-/* ── Progress ── */
 function updateProgressUI() {
-  setText('qLabel',    `שאלה ${state.qCount} מתוך ${CONFIG.maxQuestions}`);
+  setText('qLabel', `שאלה ${state.qCount} מתוך ${CONFIG.maxQuestions}`);
   document.getElementById('pBar').style.width = `${(state.qCount / CONFIG.maxQuestions) * 100}%`;
   setText('remainLabel', remainLabel());
 }
 
 function remainLabel() {
-  if (state.qCount < 5)  return '🌐 מאגר דמויות אינסופי';
-  if (state.qCount < 10) return '🔍 מצמצם אפשרויות...';
-  if (state.qCount < 16) return '🔥 מתקרב...';
+  if (state.phase === 'fixed') return '🔍 שאלות בסיסיות...';
+  if (state.qCount < 10)       return '🤔 מצמצם אפשרויות...';
+  if (state.qCount < 16)       return '🔥 מתקרב!';
   return '😏 כמעט ניחשתי!';
 }
 
@@ -321,12 +362,11 @@ function addAnswerDot(isYes) {
   document.getElementById('dotHistory').appendChild(dot);
 }
 
-/* ── Guess dots ── */
 function updateGuessDots() {
   for (let i = 1; i <= CONFIG.maxGuesses; i++) {
     const dot = document.getElementById(`gd${i}`);
     dot.className = 'gdot';
-    if (i < state.guessCount)  dot.classList.add('used');
+    if (i < state.guessCount)   dot.classList.add('used');
     if (i === state.guessCount) dot.classList.add('current');
   }
 }
@@ -363,7 +403,7 @@ function clearConfetti() {
 }
 
 /* ═══════════════════════════════════════════════════
-   INIT  (runs on page load)
+   INIT
 ═══════════════════════════════════════════════════ */
 (function init() {
   show('intro');
